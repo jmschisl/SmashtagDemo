@@ -12,16 +12,13 @@ import Twitter
 class TweetTableViewController: UITableViewController, UITextFieldDelegate {
 
     //an array of arrays of tweets
-    private var tweets = [Array<Twitter.Tweet>]() {
-        didSet {
-            print(tweets)
-        }
-    }
+    private var tweets = [Array<Twitter.Tweet>]()
     
     var searchText: String? {
         didSet {
             searchTextField?.text = searchText
             searchTextField?.resignFirstResponder()
+            lastTwitterRequest = nil
             tweets.removeAll()
             tableView.reloadData()
             searchForTweets()
@@ -39,7 +36,7 @@ class TweetTableViewController: UITableViewController, UITextFieldDelegate {
     private var lastTwitterRequest: Twitter.Request?
     
     private func searchForTweets() {
-        if let request = twitterRequest() {
+        if let request = lastTwitterRequest?.newer ?? twitterRequest() {
             lastTwitterRequest = request
             request.fetchTweets { [weak self] newTweets in
                 DispatchQueue.main.async {
@@ -47,16 +44,22 @@ class TweetTableViewController: UITableViewController, UITextFieldDelegate {
                         self?.tweets.insert(newTweets, at:0)
                         self?.tableView.insertSections([0], with: .fade)
                     }
+                    self?.refreshControl?.endRefreshing()
                 }
             }
+        } else {
+            self.refreshControl?.endRefreshing()
         }
+    }
+    
+    @IBAction func refresh(_ sender: UIRefreshControl) {
+        searchForTweets()
     }
     
     override func viewDidLoad() {
         super.viewDidLoad()
         tableView.estimatedRowHeight = tableView.rowHeight
         tableView.rowHeight = UITableViewAutomaticDimension
-        searchText = "#standford"
     }
     
     @IBOutlet weak var searchTextField: UITextField! {
@@ -96,5 +99,11 @@ class TweetTableViewController: UITableViewController, UITextFieldDelegate {
         
         
         return cell
+    }
+    
+    override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+        // make it a little clearer when each pull from Twitter
+        // occurs in the table by setting section header titles
+        return "\(tweets.count-section)"
     }
 }

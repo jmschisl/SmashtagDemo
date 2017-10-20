@@ -39,6 +39,7 @@ class TweetTableViewCell: UITableViewCell {
             else {
                 formatter.timeStyle = .short
             }
+            tweetCreatedLabel?.text = formatter.string(from: created)
         } else {
             tweetCreatedLabel?.text = nil
         }
